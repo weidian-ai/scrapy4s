@@ -1,5 +1,7 @@
 package com.scrapy4s.util
 
+import java.util
+
 import com.scrapy4s.extractor.Extractor
 import com.scrapy4s.http.Response
 

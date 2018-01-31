@@ -17,32 +17,27 @@ import scala.io.Source
 
 class HashSetScheduler(path: String) extends Scheduler {
   val logger = LoggerFactory.getLogger(classOf[HashSetScheduler])
-  private val hashSet: ConcurrentHashMap.KeySetView[Request, lang.Boolean] =ConcurrentHashMap.newKeySet[Request]()
+  private val hashSet: ConcurrentHashMap.KeySetView[Request, lang.Boolean] = ConcurrentHashMap.newKeySet[Request]()
 
   private val okList = Collections.synchronizedList(new util.ArrayList[Request]())
-  private val allList = Collections.synchronizedList(new util.ArrayList[Request]())
 
   override def check(request: Request): Boolean = {
     logger.debug(s"check request => $request")
     val result = hashSet.add(request)
-    if (result) {
-      allList.add(request)
-    }
     result
   }
 
   override def ok(request: Request): Unit = {
-    okList.add(request)
   }
 
   /**
     * 加载配置，并提交任务
+    *
     * @param spider 目标的spider
     */
   override def load(spider: Spider): Unit = {
-    val okFileName =  new File(path, spider.name + "_ok.spider")
-    val allFileName =  new File(path, spider.name + "_all.spider")
-    if (okFileName.exists() && allFileName.exists()) {
+    val okFileName = new File(path, spider.name + "_ok.spider")
+    if (okFileName.exists()) {
       Source.fromFile(okFileName).getLines().foreach(line => {
         if (line.nonEmpty) {
           val request = RequestJson.load(line).request
@@ -51,37 +46,25 @@ class HashSetScheduler(path: String) extends Scheduler {
         }
       })
       logger.info(s"success load file: ok -> ${okFileName.getAbsolutePath}")
-      Source.fromFile(allFileName).getLines().foreach(line => {
-        if (line.nonEmpty) {
-          spider.execute(RequestJson.load(line).request)
-        }
-      })
-      logger.info(s"success load file: all -> ${allFileName.getAbsolutePath}")
     }
   }
 
   override def save(spider: Spider): Unit = {
-    val okFileName =  new File(path, spider.name + "_ok.spider")
-    val allFileName =  new File(path, spider.name + "_all.spider")
+    val okFileName = new File(path, spider.name + "_ok.spider")
     val okWriter = new FileWriter(okFileName)
-    val AllWriter = new FileWriter(allFileName)
 
     okList.asScala.foreach(r => {
       okWriter.write(s"${RequestJson.load(r).toJson}\n")
     })
     okWriter.close()
     logger.info(s"success save file: ok -> ${okFileName.getAbsolutePath}")
-
-    allList.asScala.foreach(r => {
-      AllWriter.write(s"${RequestJson.load(r).toJson}\n")
-    })
-    AllWriter.close()
-    logger.info(s"success save file: all -> ${allFileName.getAbsolutePath}")
   }
 }
+
 object HashSetScheduler {
   def apply(path: String = FileUtil.tempDir): HashSetScheduler = new HashSetScheduler(path)
 }
+
 class RequestJson {
   @BeanProperty
   var url: String = _

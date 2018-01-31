@@ -37,6 +37,7 @@ class CountLogMonitor extends Monitor {
     */
   override def requestStartHook(spider: Spider) = {
     startCount.incrementAndGet()
+    printLog(spider)
   }
 
 
